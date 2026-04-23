@@ -53,5 +53,43 @@ final class NinePClientTests: XCTestCase {
         try c.clunk(fid: root)
         c.disconnect()
     }
+
+    func testAsyncClientSupportsConcurrentReads() async throws {
+        let server = try Mock9PServer()
+        defer { server.stop() }
+
+        let cfg = NinePClient.Config(host: "127.0.0.1", port: Int(server.port), user: "u", aname: nil, requestedVersion: "9P2000")
+        let c = NinePAsyncClient(config: cfg)
+        try await c.connectAndNegotiate()
+        try await c.attach()
+
+        let root = try await c.root()
+        _ = try await c.open(fid: root, mode: 0)
+
+        // Walk+open a file fid once, then hammer it concurrently.
+        let fidHello: UInt32 = 2
+        _ = try await c.walk(from: root, newfid: fidHello, names: ["hello.txt"])
+        _ = try await c.open(fid: fidHello, mode: 0)
+
+        try await withThrowingTaskGroup(of: String.self) { group in
+            for _ in 0..<25 {
+                group.addTask {
+                    let d = try await c.read(fid: fidHello, offset: 0, count: 6)
+                    return String(data: d, encoding: .utf8) ?? ""
+                }
+            }
+
+            for try await s in group {
+                XCTAssertEqual(s, "hello\n")
+            }
+        }
+
+        let entries = try await c.readDir(fid: root)
+        XCTAssertTrue(entries.contains(where: { $0.name == "hello.txt" }))
+
+        try await c.clunk(fid: fidHello)
+        try await c.clunk(fid: root)
+        await c.disconnect()
+    }
 }
 
