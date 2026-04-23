@@ -58,6 +58,13 @@ Current scope of the FSKit volume:
 ### FSKit Xcode project (for real mounts)
 To build a runnable macOS app + FSKit extension target wired to `fskit-core/`, see `fskit-xcode/` (XcodeGen spec).
 
+### FSKit end-to-end (manual) test
+To run a repeatable end-to-end test against a real 9P server:
+
+```
+./scripts/e2e-readonly.sh --url "9p://HOST:564/?vers=9P2000" --mountpoint /tmp/mac9p
+```
+
 ## Mounting
 
 ### From the Finder

@@ -56,6 +56,8 @@ It asks to be mounted as **read-only**, and it distrusts the serenity of cached 
 
 If you want to make this creature walk in the world—an app, an extension, a mount that touches a real server—there is a practical scaffold in `fskit-xcode/`, generated from an XcodeGen spec.
 
+For a repeatable end-to-end trial against a living 9P server, there is a script: `scripts/e2e-readonly.sh`. It still demands one human gesture—enabling the extension—but after that, it mounts, looks, reads, and then withdraws.
+
 ## Mounting
 
 ### From the Finder
