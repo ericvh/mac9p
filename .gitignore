@@ -9,4 +9,5 @@ kext/9p
 
 # test binaries
 tests/test_versneg
+tests/test_fcall_codec
 

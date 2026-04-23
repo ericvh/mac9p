@@ -19,13 +19,19 @@ all clean:
 		$(MAKE) -C $$i $(MAKEFLAGS) $@ || exit 1;\
 	done
 
-test: tests/test_versneg
+test: tests/test_versneg tests/test_fcall_codec
 	@echo "Running tests/test_versneg"
 	./tests/test_versneg
+	@echo "Running tests/test_fcall_codec"
+	./tests/test_fcall_codec
 
 tests/test_versneg: tests/test_versneg.c common/versneg.c common/versneg.h
 	@mkdir -p tests
 	$(CC) $(CFLAGS) -Icommon -o $@ tests/test_versneg.c common/versneg.c
+
+tests/test_fcall_codec: tests/test_fcall_codec.c kext/fcall.c kext/plan9.h kext/fcall.h
+	@mkdir -p tests
+	$(CC) $(CFLAGS) -Ikext -o $@ tests/test_fcall_codec.c kext/fcall.c
 
 kext:
 	@$(MAKE) -C kext $(MAKEFLAGS) all
