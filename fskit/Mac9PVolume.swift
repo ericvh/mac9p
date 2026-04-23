@@ -1,6 +1,7 @@
 import Foundation
 import FSKit
 import os.log
+import Mac9PCore
 
 /// FSKit volume implementation for a 9P-backed hierarchy.
 ///
@@ -14,12 +15,14 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations {
         init(identifier: UInt64) { self.identifier = identifier; super.init() }
     }
 
-    let client: NinePClient
+    let config: NinePClient.Config
+    private let client: NinePAsyncClient
     let mountURL: URL
     let rootItem: Item
 
-    init(client: NinePClient, mountURL: URL) throws {
-        self.client = client
+    init(config: NinePClient.Config, mountURL: URL) throws {
+        self.config = config
+        self.client = NinePAsyncClient(config: config)
         self.mountURL = mountURL
         self.rootItem = Item(identifier: 1)
         super.init()
@@ -28,13 +31,23 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations {
     // MARK: - Required FSVolume.Operations
 
     public func mount(options: FSTaskOptions, replyHandler reply: @escaping ((any Error)?) -> Void) {
-        // TODO: attach and establish a root fid; populate root item attrs.
-        reply(nil)
+        Task {
+            do {
+                try await client.connectAndNegotiate()
+                try await client.attach()
+                reply(nil)
+            } catch {
+                Self.log.error("mount failed: \(String(describing: error), privacy: .public)")
+                reply(error)
+            }
+        }
     }
 
     public func unmount(options: FSTaskOptions, replyHandler reply: @escaping ((any Error)?) -> Void) {
-        // TODO: clunk open fids and disconnect.
-        reply(nil)
+        Task {
+            await client.disconnect()
+            reply(nil)
+        }
     }
 
     public func synchronize(flags: FSSyncFlags, replyHandler reply: @escaping ((any Error)?) -> Void) {

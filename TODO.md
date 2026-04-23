@@ -2,15 +2,16 @@
 
 ## FSKit rewrite (Path A)
 
-- Implement a real 9P client in user space (socket + codec):
-  - Tversion/Rversion negotiation with fallback among `9P2000.L`, `9P2000.u`, `9P2000`
-  - attach/auth flows (likely `noauth` first; then p9any)
-  - robust error mapping to `POSIXError`
+- Implement a real 9P client in user space (socket + codec): **DONE (in `fskit-core/`)**
+  - Tversion/Rversion negotiation with fallback among `9P2000.L`, `9P2000.u`, `9P2000`: **DONE**
+  - attach/noauth flow: **DONE**
+  - async tag-multiplexed client for concurrency: **DONE**
+  - robust error mapping to `POSIXError`: **PARTIAL**
 - Implement readonly MVP in `Mac9PVolume`:
-  - `mount`/`unmount` lifecycle with fid management
-  - `lookupItem`, `getAttributes`
-  - `enumerateDirectory`
-  - `read` (implement `FSVolume.ReadWriteOperations.read(...)`)
+  - `mount`/`unmount` lifecycle with core client: **PARTIAL (wired; connect+attach works)**
+  - `lookupItem`, `getAttributes`: **TODO**
+  - `enumerateDirectory`: **TODO**
+  - `read` (implement `FSVolume.ReadWriteOperations.read(...)`): **TODO**
 - Add write support (phase 2):
   - create/remove, write, truncate, rename
 - Semantics by negotiated version:
@@ -22,9 +23,9 @@
   - directory enumeration caching / cookie handling
   - readahead for sequential reads
 - Packaging:
-  - Xcode project with app + filesystem extension target
-  - entitlements, sandbox/network permissions
-  - mount syntax documentation and example launchd helpers if needed
+  - Xcode project with app + filesystem extension target: **TODO**
+  - entitlements, sandbox/network permissions: **TODO**
+  - mount syntax documentation and example launchd helpers if needed: **PARTIAL (`fskit/SETUP_XCODE.md`)**
 
 ## Legacy kext path (if still needed)
 

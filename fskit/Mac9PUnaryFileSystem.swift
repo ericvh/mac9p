@@ -1,6 +1,7 @@
 import Foundation
 import FSKit
 import os.log
+import Mac9PCore
 
 final class Mac9PUnaryFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
     private static let log = Logger(subsystem: "mac9p.fskit", category: "fs")
@@ -18,21 +19,22 @@ final class Mac9PUnaryFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations
         // Keep the pattern consistent with Apple's sample.
         _ = urlResource.url.startAccessingSecurityScopedResource()
 
-        guard urlResource.url.scheme?.lowercased() == "9p" else {
-            Self.log.error("Invalid scheme: \(urlResource.url.scheme ?? "<nil>")")
+        // NOTE: Foundation.URL does not reliably parse schemes that start with a digit ("9p").
+        // Use the core parser which operates on the string form.
+        let mountString = urlResource.url.absoluteString
+        guard mountString.hasPrefix("9p://") else {
+            Self.log.error("Invalid mount string: \(mountString, privacy: .public)")
             return replyHandler(nil, POSIXError(.EINVAL))
         }
 
         do {
-            let cfg = try NinePClient.Config.from(url: urlResource.url)
-            let client = NinePClient(config: cfg)
-            try client.connectAndNegotiate()
-            let volume = try Mac9PVolume(client: client, mountURL: urlResource.url)
+            let cfg = try NinePClient.Config.from(mountString: mountString)
+            let volume = try Mac9PVolume(config: cfg, mountURL: urlResource.url)
             self.resource = urlResource
             self.containerStatus = .ready
             return replyHandler(volume, nil)
         } catch {
-            Self.log.error("loadResource failed: \(String(describing: error))")
+            Self.log.error("loadResource failed: \(String(describing: error), privacy: .public)")
             return replyHandler(nil, error)
         }
     }

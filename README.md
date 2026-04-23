@@ -34,6 +34,14 @@ make kext        # kernel extension (requires KDKROOT + matching KDK)
 The FSKit-based rewrite lives under `fskit/`. It is not wired into an Xcode project yet; the intent is that you create an Xcode app + **File System Extension** target and drop in the sources from `fskit/`.
 See `fskit/README.md` for the current skeleton and mounting goals.
 
+The **testable FSKit core** (9P client, wire codec, and mock-server tests) lives in `fskit-core/` and can be exercised with:
+
+```
+make test-core
+```
+
+See `fskit/SETUP_XCODE.md` for current packaging steps.
+
 ## Mounting ##
 ### From the Finder ###
 _(Broken if the binary is not signed)
