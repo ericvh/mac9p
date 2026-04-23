@@ -18,6 +18,7 @@ public actor NinePAsyncClient {
     private var nextTag: UInt16 = 1
     private var nextFid: UInt32 = 1
     private var freeFids: [UInt32] = []
+    private var inUseFids: Set<UInt32> = []
 
     private var rootFid: UInt32?
 
@@ -131,6 +132,7 @@ public actor NinePAsyncClient {
         let fid = allocFid()
         let _ = try await rpcTattach(fid: fid, afid: 0xFFFF_FFFF, uname: uname, aname: aname, unamenum: 0)
         rootFid = fid
+        inUseFids.insert(fid)
     }
 
     public func root() throws -> UInt32 {
@@ -140,13 +142,16 @@ public actor NinePAsyncClient {
 
     /// Allocate a new fid value for use in walk/open operations.
     public func allocateFid() -> UInt32 {
-        allocFid()
+        let fid = allocFid()
+        inUseFids.insert(fid)
+        return fid
     }
 
     /// Return a fid to the pool for reuse after the caller has clunked it.
     public func releaseFid(_ fid: UInt32) {
         // Never recycle NOFID, zero, or the active root fid.
         if fid == 0 || fid == 0xFFFF_FFFF || fid == rootFid { return }
+        inUseFids.remove(fid)
         freeFids.append(fid)
     }
 
@@ -201,6 +206,13 @@ public actor NinePAsyncClient {
         // Skip reserved values.
         if nextFid == 0 || nextFid == 0xFFFF_FFFF { nextFid &+= 1 }
         return nextFid
+    }
+
+    // MARK: - Debug/test helpers
+
+    /// Internal fid accounting for unit tests. Not a stable API.
+    func _debugFidAccounting() -> (root: UInt32?, inUse: Int, free: Int, next: UInt32) {
+        (rootFid, inUseFids.count, freeFids.count, nextFid)
     }
 
     private func rpcAsync(tType: NineP.MsgType, rType: NineP.MsgType, body: Data) async throws -> Data {

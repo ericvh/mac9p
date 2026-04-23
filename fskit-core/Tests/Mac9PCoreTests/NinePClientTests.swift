@@ -91,5 +91,55 @@ final class NinePClientTests: XCTestCase {
         try await c.clunk(fid: root)
         await c.disconnect()
     }
+
+    func testFidsAreReclaimedAfterTempWalks() async throws {
+        let server = try Mock9PServer()
+        defer { server.stop() }
+
+        let cfg = NinePClient.Config(host: "127.0.0.1", port: Int(server.port), user: "u", aname: nil, requestedVersion: "9P2000")
+        let c = NinePAsyncClient(config: cfg)
+        try await c.connectAndNegotiate()
+        try await c.attach()
+        let root = try await c.root()
+
+        // Allocate many fids, do a walk, clunk+release them.
+        for _ in 0..<200 {
+            let fid = await c.allocateFid()
+            _ = try await c.walk(from: root, newfid: fid, names: ["hello.txt"])
+            try await c.clunk(fid: fid)
+            await c.releaseFid(fid)
+        }
+
+        // At this point, only root fid should still be "in use".
+        let acc = await c._debugFidAccounting()
+        XCTAssertEqual(acc.root, root)
+        XCTAssertEqual(acc.inUse, 1)
+        // With LIFO reuse, the pool may contain only a small number of fids.
+        XCTAssertGreaterThanOrEqual(acc.free, 1)
+    }
+
+    func testFidAllocationDoesNotGrowUnboundedUnderReuse() async throws {
+        let server = try Mock9PServer()
+        defer { server.stop() }
+
+        let cfg = NinePClient.Config(host: "127.0.0.1", port: Int(server.port), user: "u", aname: nil, requestedVersion: "9P2000")
+        let c = NinePAsyncClient(config: cfg)
+        try await c.connectAndNegotiate()
+        try await c.attach()
+        let root = try await c.root()
+
+        let before = await c._debugFidAccounting().next
+
+        // Allocate/release repeatedly; should heavily reuse from free list.
+        for _ in 0..<1000 {
+            let fid = await c.allocateFid()
+            _ = try await c.walk(from: root, newfid: fid, names: ["hello.txt"])
+            try await c.clunk(fid: fid)
+            await c.releaseFid(fid)
+        }
+
+        let after = await c._debugFidAccounting().next
+        XCTAssertLessThan(after - before, 200, "expected fid reuse to cap growth")
+    }
 }
 
