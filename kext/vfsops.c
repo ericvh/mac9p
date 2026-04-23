@@ -90,6 +90,7 @@ vfs_mount_9p(mount_t mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 	fid_9p fid;
 	qid_9p qid;
 	char *vers;
+	char *reqvers;
 	int e;
 
 	TRACE();
@@ -97,6 +98,7 @@ vfs_mount_9p(mount_t mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 	addr = NULL;
 	authaddr = NULL;
 	fid = NOFID;
+	reqvers = NULL;
 
 	if (vfs_isupdate(mp))
 		return ENOTSUP;
@@ -117,6 +119,7 @@ vfs_mount_9p(mount_t mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 		args.uname			= CAST_USER_ADDR_T(args32.uname);
 		args.aname			= CAST_USER_ADDR_T(args32.aname);
 		args.authkey		= CAST_USER_ADDR_T(args32.authkey);
+		args.vers			= CAST_USER_ADDR_T(args32.vers);
 		args.flags			= args32.flags;
 	}
 	e = ENOMEM;
@@ -139,6 +142,8 @@ vfs_mount_9p(mount_t mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 		goto error;
 	if ((e=nameget_9p(args.aname, &nmp->aname)))
 		goto error;
+	if (args.vers && (e=nameget_9p(args.vers, &reqvers)))
+		goto error;
 
 	cred = vfs_context_ucred(ctx);
 	if (IS_VALID_CRED(cred)) {
@@ -159,12 +164,46 @@ vfs_mount_9p(mount_t mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 		goto error;
 
 	vers = VERSION9P;
-	if (ISSET(nmp->flags, FLAG_DOTU))
+	if (ISSET(nmp->flags, FLAG_DOTL))
+		vers = VERSION9PDOTL;
+	else if (ISSET(nmp->flags, FLAG_DOTU))
 		vers = VERSION9PDOTU;
-	if ((e=version_9p(nmp, vers, &nmp->version)))
-		goto error;
-	if (ISSET(nmp->flags, FLAG_DOTU) && strcmp(VERSION9PDOTU, nmp->version)==0)
+	if (reqvers)
+		vers = reqvers;
+
+	/*
+	 * Negotiate the most capable version we can, with safe fallbacks.
+	 * Many servers accept multiple version strings and will respond with
+	 * the chosen version in Rversion.
+	 */
+	{
+		const char *tryv[4];
+		int ntry = 0;
+
+		/* requested first */
+		tryv[ntry++] = vers;
+
+		/* fallbacks (skip duplicates) */
+		if (strcmp(vers, VERSION9PDOTL) != 0)
+			tryv[ntry++] = VERSION9PDOTL;
+		if (ntry < 4 && strcmp(vers, VERSION9PDOTU) != 0)
+			tryv[ntry++] = VERSION9PDOTU;
+		if (ntry < 4 && strcmp(vers, VERSION9P) != 0)
+			tryv[ntry++] = VERSION9P;
+
+		for (int i = 0; i < ntry; i++) {
+			e = version_9p(nmp, (char*)tryv[i], &nmp->version);
+			if (e == 0)
+				break;
+		}
+		if (e)
+			goto error;
+	}
+
+	if (strcmp(VERSION9PDOTU, nmp->version) == 0)
 		SET(nmp->flags, F_DOTU);
+	if (strcmp(VERSION9PDOTL, nmp->version) == 0)
+		SET(nmp->flags, F_DOTL);
 
 	nmp->afid = NOFID;
 	if (args.authaddr && args.authaddrlen && args.authkey) {
@@ -208,12 +247,14 @@ vfs_mount_9p(mount_t mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 	
 	free_9p(addr);
 	free_9p(authaddr);
+	free_9p(reqvers);
 	return 0;
 
 error:
 	bzero(authkey, DESKEYLEN);
 	free_9p(addr);
 	free_9p(authaddr);
+	free_9p(reqvers);
 	if (nmp->so) {
 		clunk_9p(nmp, fid);
 		disconnect_9p(nmp);

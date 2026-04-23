@@ -1,15 +1,26 @@
-export MACOSX_DEPLOYMENT_TARGET=10.5
-#export ARCHS=-arch i386 -arch x86_64 -arch ppc
-export SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-export WARNINGS=-Wall -Wmost -Wextra -Wno-missing-braces  -Wno-private-extern -Werror
-export CFLAGS=-g -isysroot $(SYSROOT) $(WARNINGS) #-DNDEBUG
-export LFLAGS=-g -isysroot $(SYSROOT)
-export CC=clang
-export PACKAGEMAKER=/Applications/PackageMaker.app/Contents/MacOS/PackageMaker
+MACOSX_DEPLOYMENT_TARGET ?= 11.0
+#export ARCHS=-arch x86_64 -arch arm64
 
-DIRS=kext load mount plugin inst
+SDKROOT ?= $(shell xcrun --sdk macosx --show-sdk-path 2>/dev/null)
+CC ?= clang
+
+WARNINGS ?= -Wall -Wextra -Wno-missing-braces -Wno-private-extern
+ifeq ($(WERROR),1)
+WARNINGS += -Werror
+endif
+
+export CFLAGS = -g -isysroot "$(SDKROOT)" -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET) $(WARNINGS) #-DNDEBUG
+export LFLAGS = -g -isysroot "$(SDKROOT)" -mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET)
+
+DIRS=load mount plugin
 
 all clean:
 	@for i in $(DIRS); do\
 		$(MAKE) -C $$i $(MAKEFLAGS) $@ || exit 1;\
 	done
+
+kext:
+	@$(MAKE) -C kext $(MAKEFLAGS) all
+
+pkg dmg:
+	@$(MAKE) -C inst $(MAKEFLAGS) $@

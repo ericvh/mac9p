@@ -4,7 +4,8 @@
 #include <err.h>
 
 static char *kext = "/Library/Extensions/9p.kext";
-static char *cmd = "/sbin/kextload";
+static char *kextload = "/sbin/kextload";
+static char *kmutil = "/usr/bin/kmutil";
 
 int
 main(int argc, char *argv[])
@@ -27,19 +28,24 @@ main(int argc, char *argv[])
 		/* shut up */
 		for(i=1; i<3; i++)
 			close(i);
-		execl(cmd, cmd, kext, NULL);
-		warn("execl %s", cmd);
+		if (access(kmutil, X_OK) == 0) {
+			execl(kmutil, "kmutil", "load", "-p", kext, NULL);
+			warn("execl %s", kmutil);
+		} else {
+			execl(kextload, kextload, kext, NULL);
+			warn("execl %s", kextload);
+		}
 		_exit(1);
 	}
 
 	if(waitpid(pid, (int*)&status, 0) != pid)
-		err(1, "waitpid %s", cmd);
+		err(1, "waitpid");
 
 	if(!WIFEXITED(status))
-		err(1, "%s signal %d", cmd, WTERMSIG(status));
+		err(1, "load tool signal %d", WTERMSIG(status));
 
 	if(WEXITSTATUS(status))
-		err(1, "%s %s failed", cmd, kext);
+		err(1, "load %s failed", kext);
 
 	return 0;
 }

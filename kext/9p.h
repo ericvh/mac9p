@@ -4,6 +4,7 @@ enum {
 	FLAG_CHATTY9P	= 1<<0,
 	FLAG_DSSTORE	= 1<<1,
 	FLAG_DOTU		= 1<<2,
+	FLAG_DOTL		= 1<<3,
 };
 
 typedef struct {
@@ -16,6 +17,7 @@ typedef struct {
 	user_addr_t uname;
 	user_addr_t aname;
 	user_addr_t authkey;
+	user_addr_t vers;
 	int flags;
 } user_args_9p;
 
@@ -29,6 +31,7 @@ typedef struct  {
 	char *uname;
 	char *aname;
 	char *authkey;
+	char *vers;
 	int flags;
 } args_9p;
 
@@ -136,6 +139,7 @@ enum {
 	F_WAITSENDLOCK		= 1<<5,
 	F_UNMOUNTING		= 1<<6,
 	F_DOTU				= 1<<7,
+	F_DOTL				= 1<<8,
 };
 
 struct mount_9p {
