@@ -69,14 +69,13 @@ public final class NinePClient {
         }
     }
 
-    public enum NegotiatedVersion: String, Equatable {
-        case v2000 = "9P2000"
-        case v2000u = "9P2000.u"
-        case v2000L = "9P2000.L"
-    }
-
     public let config: Config
-    public private(set) var negotiatedVersion: NegotiatedVersion?
+    public private(set) var negotiatedVersion: NineP.Version?
+    private let sock = NinePSocket()
+    private var nextTag: UInt16 = 1
+    private var nextFid: UInt32 = 1
+
+    private var rootFid: UInt32?
 
     public init(config: Config) {
         self.config = config
@@ -90,15 +89,177 @@ public final class NinePClient {
     }
 
     public func connectAndNegotiate() throws {
-        // TODO: real socket negotiation. For now pick first candidate for determinism.
+        try sock.connect(host: config.host, port: config.port)
+
+        // Negotiate by trying candidates until accepted.
         let candidates = Self.versionCandidates(requested: config.requestedVersion)
-        guard let chosen = candidates.first else { throw POSIXError(.EINVAL) }
-        switch chosen {
-        case NegotiatedVersion.v2000L.rawValue: negotiatedVersion = .v2000L
-        case NegotiatedVersion.v2000u.rawValue: negotiatedVersion = .v2000u
-        case NegotiatedVersion.v2000.rawValue: negotiatedVersion = .v2000
-        default: throw POSIXError(.EPROTO)
+        var lastErr: Error?
+        for v in candidates {
+            do {
+                let (msize, chosen) = try rpcTversion(msize: 64 * 1024, version: v)
+                _ = msize
+                guard let ver = NineP.Version(rawValue: chosen) else { throw POSIXError(.EPROTO) }
+                negotiatedVersion = ver
+                return
+            } catch {
+                lastErr = error
+            }
         }
+        throw lastErr ?? POSIXError(.EPROTO)
+    }
+
+    public func disconnect() {
+        sock.closeSocket()
+    }
+
+    // MARK: - Read-only MVP operations (attach/walk/open/read/readdir/stat)
+
+    public func attach() throws {
+        let uname = config.user ?? "none"
+        let aname = config.aname ?? ""
+        let fid = allocFid()
+        // We do no-auth MVP; afid = NOFID (0xFFFFFFFF).
+        let (qid) = try rpcTattach(fid: fid, afid: 0xFFFF_FFFF, uname: uname, aname: aname, unamenum: 0)
+        _ = qid
+        rootFid = fid
+    }
+
+    public func walk(from fid: UInt32, newfid: UInt32, names: [String]) throws -> [NineP.Qid] {
+        try rpcTwalk(fid: fid, newfid: newfid, names: names)
+    }
+
+    public func open(fid: UInt32, mode: UInt8) throws -> (qid: NineP.Qid, iounit: UInt32) {
+        try rpcTopen(fid: fid, mode: mode)
+    }
+
+    public func read(fid: UInt32, offset: UInt64, count: UInt32) throws -> Data {
+        try rpcTread(fid: fid, offset: offset, count: count)
+    }
+
+    public func stat(fid: UInt32) throws -> NineP.Stat {
+        let raw = try rpcTstat(fid: fid)
+        return try NinePWireCodec.decodeStat(raw)
+    }
+
+    public func readDir(fid: UInt32) throws -> [NineP.Stat] {
+        // Classic 9P directory reads: read repeatedly until empty.
+        var offset: UInt64 = 0
+        var all = Data()
+        while true {
+            let chunk = try read(fid: fid, offset: offset, count: 8192)
+            if chunk.isEmpty { break }
+            all.append(chunk)
+            offset += UInt64(chunk.count)
+            if chunk.count < 8192 { break }
+        }
+        return try NinePWireCodec.splitDirReadIntoStats(all)
+    }
+
+    public func clunk(fid: UInt32) throws {
+        _ = try rpcTclunk(fid: fid)
+    }
+
+    // MARK: - Internal RPC helpers
+
+    private func allocTag() -> UInt16 { defer { nextTag &+= 1 }; return nextTag }
+    private func allocFid() -> UInt32 { defer { nextFid &+= 1 }; return nextFid }
+
+    private func rpc(_ type: NineP.MsgType, body: Data) throws -> (rtype: NineP.MsgType, tag: UInt16, body: Data) {
+        let tag = allocTag()
+        let msg = NinePWireCodec.encodeMessage(type: type, tag: tag, body: body)
+        try sock.sendAll(msg)
+        let rx = try sock.recvMessage()
+        let (_, rtype, rtag, rbody) = try NinePWireCodec.decodeHeader(rx)
+        guard rtag == tag || rtag == 0xFFFF else { throw POSIXError(.EPROTO) }
+        if rtype == .rerror {
+            var rr = NinePDataCodec.Reader(rbody)
+            let ename = try rr.string()
+            throw NSError(domain: "NineP", code: Int(EPROTO), userInfo: [NSLocalizedDescriptionKey: ename])
+        }
+        return (rtype, rtag, rbody)
+    }
+
+    private func rpcTversion(msize: UInt32, version: String) throws -> (msize: UInt32, version: String) {
+        var w = NinePDataCodec.Writer()
+        w.u32(msize)
+        w.string(version)
+        let (rtype, _, body) = try rpc(.tversion, body: w.data)
+        guard rtype == .rversion else { throw POSIXError(.EPROTO) }
+        var r = NinePDataCodec.Reader(body)
+        let rMsize = try r.u32()
+        let rVer = try r.string()
+        return (rMsize, rVer)
+    }
+
+    private func rpcTattach(fid: UInt32, afid: UInt32, uname: String, aname: String, unamenum: UInt32) throws -> NineP.Qid {
+        var w = NinePDataCodec.Writer()
+        w.u32(fid)
+        w.u32(afid)
+        w.string(uname)
+        w.string(aname)
+        // We always send unamenum (server may ignore if not dotu); harmless for MVP.
+        w.u32(unamenum)
+        let (rtype, _, body) = try rpc(.tattach, body: w.data)
+        guard rtype == .rattach else { throw POSIXError(.EPROTO) }
+        var r = NinePDataCodec.Reader(body)
+        return try NinePWireCodec.decodeQid(&r)
+    }
+
+    private func rpcTwalk(fid: UInt32, newfid: UInt32, names: [String]) throws -> [NineP.Qid] {
+        var w = NinePDataCodec.Writer()
+        w.u32(fid)
+        w.u32(newfid)
+        w.u16(UInt16(names.count))
+        for n in names { w.string(n) }
+        let (rtype, _, body) = try rpc(.twalk, body: w.data)
+        guard rtype == .rwalk else { throw POSIXError(.EPROTO) }
+        var r = NinePDataCodec.Reader(body)
+        let nwqid = Int(try r.u16())
+        var q: [NineP.Qid] = []
+        q.reserveCapacity(nwqid)
+        for _ in 0..<nwqid { q.append(try NinePWireCodec.decodeQid(&r)) }
+        return q
+    }
+
+    private func rpcTopen(fid: UInt32, mode: UInt8) throws -> (NineP.Qid, UInt32) {
+        var w = NinePDataCodec.Writer()
+        w.u32(fid)
+        w.u8(mode)
+        let (rtype, _, body) = try rpc(.topen, body: w.data)
+        guard rtype == .ropen else { throw POSIXError(.EPROTO) }
+        var r = NinePDataCodec.Reader(body)
+        let qid = try NinePWireCodec.decodeQid(&r)
+        let iounit = try r.u32()
+        return (qid, iounit)
+    }
+
+    private func rpcTread(fid: UInt32, offset: UInt64, count: UInt32) throws -> Data {
+        var w = NinePDataCodec.Writer()
+        w.u32(fid)
+        w.u64(offset)
+        w.u32(count)
+        let (rtype, _, body) = try rpc(.tread, body: w.data)
+        guard rtype == .rread else { throw POSIXError(.EPROTO) }
+        var r = NinePDataCodec.Reader(body)
+        let n = Int(try r.u32())
+        return try r.bytes(n)
+    }
+
+    private func rpcTclunk(fid: UInt32) throws -> Void {
+        var w = NinePDataCodec.Writer()
+        w.u32(fid)
+        let (rtype, _, _) = try rpc(.tclunk, body: w.data)
+        guard rtype == .rclunk else { throw POSIXError(.EPROTO) }
+    }
+
+    private func rpcTstat(fid: UInt32) throws -> Data {
+        var w = NinePDataCodec.Writer()
+        w.u32(fid)
+        let (rtype, _, body) = try rpc(.tstat, body: w.data)
+        guard rtype == .rstat else { throw POSIXError(.EPROTO) }
+        var r = NinePDataCodec.Reader(body)
+        let nstat = Int(try r.u16())
+        return try r.bytes(nstat)
     }
 }
 
