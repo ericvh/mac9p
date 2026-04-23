@@ -20,7 +20,8 @@ all clean:
 	done
 
 test: tests/test_versneg
-	@./tests/test_versneg
+	@echo "Running tests/test_versneg"
+	./tests/test_versneg
 
 tests/test_versneg: tests/test_versneg.c common/versneg.c common/versneg.h
 	@mkdir -p tests
