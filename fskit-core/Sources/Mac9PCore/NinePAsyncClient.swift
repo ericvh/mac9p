@@ -17,6 +17,7 @@ public actor NinePAsyncClient {
 
     private var nextTag: UInt16 = 1
     private var nextFid: UInt32 = 1
+    private var freeFids: [UInt32] = []
 
     private var rootFid: UInt32?
 
@@ -142,6 +143,13 @@ public actor NinePAsyncClient {
         allocFid()
     }
 
+    /// Return a fid to the pool for reuse after the caller has clunked it.
+    public func releaseFid(_ fid: UInt32) {
+        // Never recycle NOFID, zero, or the active root fid.
+        if fid == 0 || fid == 0xFFFF_FFFF || fid == rootFid { return }
+        freeFids.append(fid)
+    }
+
     public func walk(from fid: UInt32, newfid: UInt32, names: [String]) async throws -> [NineP.Qid] {
         try await rpcTwalk(fid: fid, newfid: newfid, names: names)
     }
@@ -187,7 +195,13 @@ public actor NinePAsyncClient {
         }
     }
 
-    private func allocFid() -> UInt32 { defer { nextFid &+= 1 }; return nextFid }
+    private func allocFid() -> UInt32 {
+        if let fid = freeFids.popLast() { return fid }
+        defer { nextFid &+= 1 }
+        // Skip reserved values.
+        if nextFid == 0 || nextFid == 0xFFFF_FFFF { nextFid &+= 1 }
+        return nextFid
+    }
 
     private func rpcAsync(tType: NineP.MsgType, rType: NineP.MsgType, body: Data) async throws -> Data {
         let tag = allocTag()

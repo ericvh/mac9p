@@ -36,6 +36,16 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
     let mountURL: URL
     let rootItem: Item
 
+    private struct FidEntry {
+        var fid: UInt32
+        var refCount: Int
+        var parentID: FSItem.Identifier
+        var isDirectory: Bool
+        var name: String
+    }
+    private let fidTableLock = NSLock()
+    private var fidTable: [FSItem.Identifier: FidEntry] = [:]
+
     init(config: NinePClient.Config, mountURL: URL) throws {
         self.config = config
         self.client = NinePAsyncClient(config: config)
@@ -81,6 +91,9 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
                 // Patch in the real root fid (we keep the instance stable for FSKit).
                 self.rootItem.name = "."
                 self.rootItem.fid = rootFid
+                fidTableLock.lock()
+                fidTable[.rootDirectory] = FidEntry(fid: rootFid, refCount: 1, parentID: .parentOfRoot, isDirectory: true, name: ".")
+                fidTableLock.unlock()
                 reply(nil)
             } catch {
                 Self.log.error("mount failed: \(String(describing: error), privacy: .public)")
@@ -92,6 +105,9 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
     public func unmount(replyHandler reply: @escaping @Sendable ((any Error)?) -> Void) {
         Task {
             await client.disconnect()
+            fidTableLock.lock()
+            fidTable.removeAll()
+            fidTableLock.unlock()
             reply(nil)
         }
     }
@@ -103,15 +119,33 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
 
     public func reclaimItem(_ item: FSItem, replyHandler reply: @escaping @Sendable ((any Error)?) -> Void) {
         guard let it = item as? Item else { return reply(nil) }
-        Task {
-            do {
-                if it.fid != 0 {
-                    try await client.clunk(fid: it.fid)
+        // Reference-counted fid reclamation: only clunk+release when last reference goes away.
+        fidTableLock.lock()
+        var entry = fidTable[it.itemID]
+        if entry == nil {
+            fidTableLock.unlock()
+            return reply(nil)
+        }
+        entry!.refCount -= 1
+        if entry!.refCount <= 0 {
+            fidTable[it.itemID] = nil
+            fidTableLock.unlock()
+            Task {
+                do {
+                    if it.fid != 0 {
+                        try await client.clunk(fid: it.fid)
+                        await client.releaseFid(it.fid)
+                    }
+                    reply(nil)
+                } catch {
+                    reply(error)
                 }
-                reply(nil)
-            } catch {
-                reply(error)
             }
+            return
+        } else {
+            fidTable[it.itemID] = entry
+            fidTableLock.unlock()
+            return reply(nil)
         }
     }
 
@@ -186,13 +220,37 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
 
         Task {
             do {
-                let newfid = await clientAllocFid()
-                let qids = try await client.walk(from: dir.fid, newfid: newfid, names: [childName])
-                guard let q = qids.last else { return reply(nil, nil, POSIXError(.ENOENT)) }
-                let isDir = (q.type & 0x80) != 0
+                // First: if we already have a live fid for this inode, reuse it and bump refcount.
+                // To get inode (qid.path) we need one walk; once resolved we can reuse thereafter.
+                let tempFid = await client.allocateFid()
+                let qids = try await client.walk(from: dir.fid, newfid: tempFid, names: [childName])
+                guard let q = qids.last else {
+                    await client.releaseFid(tempFid)
+                    return reply(nil, nil, POSIXError(.ENOENT))
+                }
+
                 let childID = FSItem.Identifier(rawValue: q.path)
-                let item = Item(itemID: childID, parentID: dir.itemID, fid: newfid, isDirectory: isDir, name: childName)
-                reply(item, FSFileName(string: childName), nil)
+                let isDir = (q.type & 0x80) != 0
+
+                fidTableLock.lock()
+                if var existing = fidTable[childID] {
+                    existing.refCount += 1
+                    fidTable[childID] = existing
+                    fidTableLock.unlock()
+
+                    // Clunk the temp fid we used only for resolution, then release it.
+                    try await client.clunk(fid: tempFid)
+                    await client.releaseFid(tempFid)
+
+                    let item = Item(itemID: childID, parentID: dir.itemID, fid: existing.fid, isDirectory: existing.isDirectory, name: existing.name)
+                    return reply(item, FSFileName(string: existing.name), nil)
+                } else {
+                    fidTable[childID] = FidEntry(fid: tempFid, refCount: 1, parentID: dir.itemID, isDirectory: isDir, name: childName)
+                    fidTableLock.unlock()
+
+                    let item = Item(itemID: childID, parentID: dir.itemID, fid: tempFid, isDirectory: isDir, name: childName)
+                    return reply(item, FSFileName(string: childName), nil)
+                }
             } catch {
                 reply(nil, nil, error)
             }
@@ -346,8 +404,6 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
         return a
     }
 
-    private func clientAllocFid() async -> UInt32 {
-        await client.allocateFid()
-    }
+    // no longer needed: fid lifecycle is managed via allocate/release + fidTable
 }
 

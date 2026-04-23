@@ -12,6 +12,7 @@
   - `lookupItem`, `getAttributes`: **IN PROGRESS (initial implementation added)**
   - `enumerateDirectory`: **IN PROGRESS (initial implementation added)**
   - `read` (implement `FSVolume.ReadWriteOperations.read(...)`): **IN PROGRESS (initial implementation added)**
+  - fid lifecycle (refcount + clunk + reuse without collisions): **IN PROGRESS**
 - Add write support (phase 2):
   - create/remove, write, truncate, rename
 - Semantics by negotiated version:
