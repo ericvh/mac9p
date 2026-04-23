@@ -46,6 +46,45 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
     private let fidTableLock = NSLock()
     private var fidTable: [FSItem.Identifier: FidEntry] = [:]
 
+    private struct DirSnapshot {
+        var generation: UInt32
+        var entries: [NineP.Stat]
+    }
+    private var nextDirGeneration: UInt32 = 1
+    private var dirSnapshots: [FSItem.Identifier: DirSnapshot] = [:]
+
+    // Minimal helper: NSLock convenience
+    // (kept private to avoid leaking dependencies into other files)
+    private func withLock<T>(_ lock: NSLock, _ body: () throws -> T) rethrows -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body()
+    }
+
+    // MARK: - Supported capabilities
+
+    var supportedVolumeCapabilities: FSVolume.SupportedCapabilities {
+        let c = FSVolume.SupportedCapabilities()
+        c.supportsPersistentObjectIDs = false
+        c.supports64BitObjectIDs = true
+        c.supportsHardLinks = false
+        c.supportsSymbolicLinks = false
+        c.supportsJournal = false
+        c.supportsActiveJournal = false
+        c.supportsSparseFiles = false
+        c.supportsFastStatFS = false
+        c.supports2TBFiles = true
+        c.supportsHiddenFiles = true
+        c.doesNotSupportSettingFilePermissions = true
+        c.doesNotSupportRootTimes = true
+        return c
+    }
+
+    // Request mount options (best-effort) — at minimum, keep the mount read-only.
+    var requestedMountOptions: FSVolume.MountOptions {
+        .readOnly
+    }
+
     init(config: NinePClient.Config, mountURL: URL) throws {
         self.config = config
         self.client = NinePAsyncClient(config: config)
@@ -91,9 +130,9 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
                 // Patch in the real root fid (we keep the instance stable for FSKit).
                 self.rootItem.name = "."
                 self.rootItem.fid = rootFid
-                fidTableLock.lock()
-                fidTable[.rootDirectory] = FidEntry(fid: rootFid, refCount: 1, parentID: .parentOfRoot, isDirectory: true, name: ".")
-                fidTableLock.unlock()
+                withLock(fidTableLock) {
+                    fidTable[.rootDirectory] = FidEntry(fid: rootFid, refCount: 1, parentID: .parentOfRoot, isDirectory: true, name: ".")
+                }
                 reply(nil)
             } catch {
                 Self.log.error("mount failed: \(String(describing: error), privacy: .public)")
@@ -105,9 +144,10 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
     public func unmount(replyHandler reply: @escaping @Sendable ((any Error)?) -> Void) {
         Task {
             await client.disconnect()
-            fidTableLock.lock()
-            fidTable.removeAll()
-            fidTableLock.unlock()
+            withLock(fidTableLock) {
+                fidTable.removeAll()
+                dirSnapshots.removeAll()
+            }
             reply(nil)
         }
     }
@@ -120,16 +160,18 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
     public func reclaimItem(_ item: FSItem, replyHandler reply: @escaping @Sendable ((any Error)?) -> Void) {
         guard let it = item as? Item else { return reply(nil) }
         // Reference-counted fid reclamation: only clunk+release when last reference goes away.
-        fidTableLock.lock()
-        var entry = fidTable[it.itemID]
-        if entry == nil {
-            fidTableLock.unlock()
-            return reply(nil)
+        var shouldFree = false
+        withLock(fidTableLock) {
+            guard var entry = fidTable[it.itemID] else { return }
+            entry.refCount -= 1
+            if entry.refCount <= 0 {
+                fidTable[it.itemID] = nil
+                shouldFree = true
+            } else {
+                fidTable[it.itemID] = entry
+            }
         }
-        entry!.refCount -= 1
-        if entry!.refCount <= 0 {
-            fidTable[it.itemID] = nil
-            fidTableLock.unlock()
+        if shouldFree {
             Task {
                 do {
                     if it.fid != 0 {
@@ -142,11 +184,8 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
                 }
             }
             return
-        } else {
-            fidTable[it.itemID] = entry
-            fidTableLock.unlock()
-            return reply(nil)
         }
+        return reply(nil)
     }
 
     // MARK: - Mutating operations (readonly MVP => ENOTSUP)
@@ -232,12 +271,16 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
                 let childID = FSItem.Identifier(rawValue: q.path)
                 let isDir = (q.type & 0x80) != 0
 
-                fidTableLock.lock()
-                if var existing = fidTable[childID] {
-                    existing.refCount += 1
-                    fidTable[childID] = existing
-                    fidTableLock.unlock()
+                let existing: FidEntry? = withLock(fidTableLock) {
+                    if var e = fidTable[childID] {
+                        e.refCount += 1
+                        fidTable[childID] = e
+                        return e
+                    }
+                    return nil
+                }
 
+                if let existing {
                     // Clunk the temp fid we used only for resolution, then release it.
                     try await client.clunk(fid: tempFid)
                     await client.releaseFid(tempFid)
@@ -245,8 +288,9 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
                     let item = Item(itemID: childID, parentID: dir.itemID, fid: existing.fid, isDirectory: existing.isDirectory, name: existing.name)
                     return reply(item, FSFileName(string: existing.name), nil)
                 } else {
-                    fidTable[childID] = FidEntry(fid: tempFid, refCount: 1, parentID: dir.itemID, isDirectory: isDir, name: childName)
-                    fidTableLock.unlock()
+                    withLock(fidTableLock) {
+                        fidTable[childID] = FidEntry(fid: tempFid, refCount: 1, parentID: dir.itemID, isDirectory: isDir, name: childName)
+                    }
 
                     let item = Item(itemID: childID, parentID: dir.itemID, fid: tempFid, isDirectory: isDir, name: childName)
                     return reply(item, FSFileName(string: childName), nil)
@@ -286,10 +330,19 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
 
         Task {
             do {
-                let startIndex: Int = {
-                    if cookie == .initial { return 0 }
-                    return Int(cookie.rawValue)
-                }()
+                // Cookie encoding: upper 32 bits = generation, lower 32 bits = start index.
+                // A new generation is created whenever enumeration restarts from .initial.
+                func decodeCookie(_ c: FSDirectoryCookie) -> (gen: UInt32, idx: Int) {
+                    if c == .initial { return (0, 0) }
+                    let raw = c.rawValue
+                    let gen = UInt32(raw >> 32)
+                    let idx = Int(UInt32(truncatingIfNeeded: raw))
+                    return (gen, idx)
+                }
+                func encodeCookie(gen: UInt32, idx: Int) -> FSDirectoryCookie {
+                    let raw = (UInt64(gen) << 32) | UInt64(UInt32(idx))
+                    return FSDirectoryCookie(raw)
+                }
 
                 // FSKit tip: if attributes == nil, include "." and ".."
                 var index = 0
@@ -313,16 +366,47 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
                     )
                 }
 
-                let entries = try await client.readDir(fid: dir.fid)
-                guard startIndex <= entries.count else {
-                    return reply(verifier, FSError.invalidDirectoryCookie)
+                let decoded = decodeCookie(cookie)
+
+                // Build or reuse a snapshot:
+                // - On initial: always fetch fresh from server to avoid stale synthetic views.
+                // - On continuation: use cached snapshot by generation to make cookies stable.
+                let snapshot: DirSnapshot = {
+                    if cookie == .initial {
+                        return DirSnapshot(generation: 0, entries: [])
+                    }
+                    let snap = withLock(fidTableLock) { dirSnapshots[dir.itemID] }
+                    return snap ?? DirSnapshot(generation: 0, entries: [])
+                }()
+
+                let active: DirSnapshot
+                if cookie == .initial || snapshot.generation == 0 {
+                    let fresh = try await client.readDir(fid: dir.fid)
+                    let gen: UInt32 = withLock(fidTableLock) {
+                        let g = nextDirGeneration
+                        nextDirGeneration &+= 1
+                        dirSnapshots[dir.itemID] = DirSnapshot(generation: g, entries: fresh)
+                        return g
+                    }
+                    active = DirSnapshot(generation: gen, entries: fresh)
+                } else {
+                    // Continuation must match generation
+                    guard decoded.gen == snapshot.generation else {
+                        return reply(verifier, FSError.invalidDirectoryCookie)
+                    }
+                    active = snapshot
                 }
 
-                for i in startIndex..<entries.count {
-                    let st = entries[i]
+                let startIndex = decoded.idx
+                guard startIndex <= active.entries.count else {
+                    return reply(FSDirectoryVerifier(UInt64(active.generation)), FSError.invalidDirectoryCookie)
+                }
+
+                for i in startIndex..<active.entries.count {
+                    let st = active.entries[i]
                     let itemType: FSItem.ItemType = ((st.qid.type & 0x80) != 0) ? .directory : .file
                     let itemID = FSItem.Identifier(rawValue: st.qid.path)
-                    let next = FSDirectoryCookie(UInt64(i + 1))
+                    let next = encodeCookie(gen: active.generation, idx: i + 1)
 
                     let attrs = attributes != nil ? makeAttributesFromStatForEnumeration(itemID: itemID, parentID: dir.itemID, stat: st) : nil
                     let ok = packer.packEntry(
@@ -336,9 +420,10 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
                     index = i
                 }
 
-                // Simple verifier: stable constant for now.
+                // Verifier is the snapshot generation. This changes every time enumeration
+                // restarts from .initial (fresh fetch).
                 _ = index
-                reply(FSDirectoryVerifier(1), nil)
+                reply(FSDirectoryVerifier(UInt64(active.generation)), nil)
             } catch {
                 reply(verifier, error)
             }

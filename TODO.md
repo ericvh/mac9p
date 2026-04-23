@@ -12,7 +12,7 @@
   - `lookupItem`, `getAttributes`: **IN PROGRESS (initial implementation added)**
   - `enumerateDirectory`: **IN PROGRESS (initial implementation added)**
   - `read` (implement `FSVolume.ReadWriteOperations.read(...)`): **IN PROGRESS (initial implementation added)**
-  - fid lifecycle (refcount + clunk + reuse without collisions): **IN PROGRESS**
+  - fid lifecycle (refcount + clunk + reuse without collisions): **DONE (FSKit layer + fskit-core pool + tests)**
 - Add write support (phase 2):
   - create/remove, write, truncate, rename
 - Semantics by negotiated version:
@@ -32,4 +32,3 @@
 
 - Verify kext builds against a matching KDK and document the exact KDK/Xcode/macOS version pairing.
 - Remove deprecated CoreFoundation URL escaping calls in `plugin/plugin.c` (optional cleanup).
-
