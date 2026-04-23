@@ -42,6 +42,8 @@ make test-core
 
 See `fskit/SETUP_XCODE.md` for current packaging steps.
 
+FSKit `Mac9PVolume` now has an initial **readonly implementation** (lookup/attributes/enumeration/read), backed by the async 9P client in `fskit-core/`.
+
 ## Mounting ##
 ### From the Finder ###
 _(Broken if the binary is not signed)

@@ -50,6 +50,8 @@ make test-core
 
 For the present, packaging instructions are gathered in `fskit/SETUP_XCODE.md`.
 
+The FSKit volume has begun to speak in earnest: there is now an initial **read-only** implementation for lookup, attributes, enumeration, and reading—its nerves connected to the async 9P core in `fskit-core/`.
+
 ## Mounting
 
 ### From the Finder

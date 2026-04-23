@@ -137,6 +137,11 @@ public actor NinePAsyncClient {
         return r
     }
 
+    /// Allocate a new fid value for use in walk/open operations.
+    public func allocateFid() -> UInt32 {
+        allocFid()
+    }
+
     public func walk(from fid: UInt32, newfid: UInt32, names: [String]) async throws -> [NineP.Qid] {
         try await rpcTwalk(fid: fid, newfid: newfid, names: names)
     }

@@ -9,9 +9,9 @@
   - robust error mapping to `POSIXError`: **PARTIAL**
 - Implement readonly MVP in `Mac9PVolume`:
   - `mount`/`unmount` lifecycle with core client: **PARTIAL (wired; connect+attach works)**
-  - `lookupItem`, `getAttributes`: **TODO**
-  - `enumerateDirectory`: **TODO**
-  - `read` (implement `FSVolume.ReadWriteOperations.read(...)`): **TODO**
+  - `lookupItem`, `getAttributes`: **IN PROGRESS (initial implementation added)**
+  - `enumerateDirectory`: **IN PROGRESS (initial implementation added)**
+  - `read` (implement `FSVolume.ReadWriteOperations.read(...)`): **IN PROGRESS (initial implementation added)**
 - Add write support (phase 2):
   - create/remove, write, truncate, rename
 - Semantics by negotiated version:
