@@ -1,0 +1,112 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "Mac9PCore-arm64-apple-macosx-debug.module": ["<Mac9PCore-arm64-apple-macosx-debug.module>"]
+  "Mac9PCorePackageTests-arm64-apple-macosx-debug.module": ["<Mac9PCorePackageTests-arm64-apple-macosx-debug.module>"]
+  "Mac9PCorePackageTests-arm64-apple-macosx-debug.test": ["<Mac9PCorePackageTests-arm64-apple-macosx-debug.test>"]
+  "Mac9PCoreTests-arm64-apple-macosx-debug.module": ["<Mac9PCoreTests-arm64-apple-macosx-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<Mac9PCore-arm64-apple-macosx-debug.module>"]
+  "test": ["<Mac9PCore-arm64-apple-macosx-debug.module>","<Mac9PCorePackageTests-arm64-apple-macosx-debug.test>","<Mac9PCoreTests-arm64-apple-macosx-debug.module>"]
+default: "main"
+nodes:
+  "/Users/erivan01/work/mac9p/fskit-core/Sources/Mac9PCore/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/erivan01/work/mac9p/fskit-core/Tests/Mac9PCoreTests/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/erivan01/work/mac9p/fskit-core/Sources/Mac9PCore/NinePClient.swift"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/sources"]
+    description: "Write auxiliary file /Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/sources"
+
+  "/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.derived/runner.swift"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/sources"]
+    description: "Write auxiliary file /Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/sources"
+
+  "/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.derived/runner.swift":
+    tool: test-entry-point-tool
+    inputs: []
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.derived/runner.swift"]
+
+  "/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/NinePClient.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/runner.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/NinePClientTests.swift.o"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.product/Objects.LinkFileList"
+
+  "/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/erivan01/work/mac9p/fskit-core/Tests/Mac9PCoreTests/NinePClientTests.swift"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/sources"]
+    description: "Write auxiliary file /Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/sources"
+
+  "/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<Mac9PCore-arm64-apple-macosx-debug.module>":
+    tool: phony
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/NinePClient.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCore.swiftmodule"]
+    outputs: ["<Mac9PCore-arm64-apple-macosx-debug.module>"]
+
+  "<Mac9PCorePackageTests-arm64-apple-macosx-debug.module>":
+    tool: phony
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/runner.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCorePackageTests.swiftmodule"]
+    outputs: ["<Mac9PCorePackageTests-arm64-apple-macosx-debug.module>"]
+
+  "<Mac9PCorePackageTests-arm64-apple-macosx-debug.test>":
+    tool: phony
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.xctest/Contents/MacOS/Mac9PCorePackageTests"]
+    outputs: ["<Mac9PCorePackageTests-arm64-apple-macosx-debug.test>"]
+
+  "<Mac9PCoreTests-arm64-apple-macosx-debug.module>":
+    tool: phony
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/NinePClientTests.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCoreTests.swiftmodule"]
+    outputs: ["<Mac9PCoreTests-arm64-apple-macosx-debug.module>"]
+
+  "C.Mac9PCore-arm64-apple-macosx-debug.module":
+    tool: shell
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/Sources/Mac9PCore/NinePClient.swift","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/sources"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/NinePClient.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCore.swiftmodule"]
+    description: "Compiling Swift Module 'Mac9PCore' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","Mac9PCore","-emit-dependencies","-emit-module","-emit-module-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCore.swiftmodule","-output-file-map","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/sources","-I","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j16","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/include/Mac9PCore-Swift.h","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","fskit_core"]
+
+  "C.Mac9PCorePackageTests-arm64-apple-macosx-debug.module":
+    tool: shell
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.derived/runner.swift","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCoreTests.swiftmodule","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/sources"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/runner.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCorePackageTests.swiftmodule"]
+    description: "Compiling Swift Module 'Mac9PCorePackageTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","Mac9PCorePackageTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCorePackageTests.swiftmodule","-output-file-map","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/sources","-I","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx13.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j16","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/include/Mac9PCorePackageTests-Swift.h","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","fskit_core"]
+
+  "C.Mac9PCorePackageTests-arm64-apple-macosx-debug.test":
+    tool: shell
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCore.build/NinePClient.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.build/runner.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/NinePClientTests.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.product/Objects.LinkFileList"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.xctest/Contents/MacOS/Mac9PCorePackageTests"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.xctest/Contents/MacOS/Mac9PCorePackageTests"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-L","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug","-o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.xctest/Contents/MacOS/Mac9PCorePackageTests","-module-name","Mac9PCorePackageTests","-Xlinker","-no_warn_duplicate_libraries","-Xlinker","-bundle","-Xlinker","-rpath","-Xlinker","@loader_path/../../../","@/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCorePackageTests.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx14.0","-Xlinker","-add_ast_path","-Xlinker","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCore.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCorePackageTests.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCoreTests.swiftmodule","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g"]
+
+  "C.Mac9PCoreTests-arm64-apple-macosx-debug.module":
+    tool: shell
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/Tests/Mac9PCoreTests/NinePClientTests.swift","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCore.swiftmodule","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/sources"]
+    outputs: ["/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/NinePClientTests.swift.o","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCoreTests.swiftmodule"]
+    description: "Compiling Swift Module 'Mac9PCoreTests' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","Mac9PCoreTests","-emit-dependencies","-emit-module","-emit-module-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules/Mac9PCoreTests.swiftmodule","-output-file-map","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Mac9PCoreTests.build/sources","-I","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j16","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/erivan01/work/mac9p/fskit-core/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","fskit_core"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/erivan01/work/mac9p/fskit-core/Sources/Mac9PCore/","/Users/erivan01/work/mac9p/fskit-core/Tests/Mac9PCoreTests/","/Users/erivan01/work/mac9p/fskit-core/Package.swift","/Users/erivan01/work/mac9p/fskit-core/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
