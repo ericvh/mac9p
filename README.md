@@ -65,6 +65,21 @@ To run a repeatable end-to-end test against a real 9P server:
 ./scripts/e2e-readonly.sh --url "9p://HOST:564/?vers=9P2000" --mountpoint /tmp/mac9p
 ```
 
+### External 9P server automation (diod)
+For automated end-to-end testing of the **user-space 9P client** (not the FSKit mount path), we support spinning up a real 9P server using `diod`:
+
+- `scripts/run-diod-test-server.sh`: builds/runs `diod` and exports a directory
+- `fskit-core` test `External9PTests`: connects using `MAC9P_E2E_URL`
+
+Example:
+
+```bash
+mkdir -p /tmp/mac9p-e2e-root
+echo "hello" > /tmp/mac9p-e2e-root/hello.txt
+./scripts/run-diod-test-server.sh --root /tmp/mac9p-e2e-root --listen 127.0.0.1:5640
+MAC9P_E2E_URL="9p://127.0.0.1:5640/?vers=9P2000" MAC9P_E2E_READ_FILE="hello.txt" (cd fskit-core && swift test --filter External9PTests)
+```
+
 ## Mounting
 
 ### From the Finder

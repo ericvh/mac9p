@@ -26,6 +26,32 @@ jobs:
       - name: SwiftPM tests (FSKit core)
         run: make test-core
 
+  test-external-9p-diod:
+    runs-on: macos-latest
+    if: >
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Start diod and run external 9P tests
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mac9p-e2e-root
+          echo "hello from diod" > /tmp/mac9p-e2e-root/hello.txt
+          chmod +x ./scripts/run-diod-test-server.sh
+          ./scripts/run-diod-test-server.sh --root /tmp/mac9p-e2e-root --listen 127.0.0.1:5640
+          export MAC9P_E2E_URL="9p://127.0.0.1:5640/?vers=9P2000"
+          export MAC9P_E2E_READ_FILE="hello.txt"
+          cd fskit-core
+          swift test --filter External9PTests
+
   test-kext-codec:
     runs-on: macos-latest
     if: >
