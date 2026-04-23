@@ -8,11 +8,12 @@
   - async tag-multiplexed client for concurrency: **DONE**
   - robust error mapping to `POSIXError`: **PARTIAL**
 - Implement readonly MVP in `Mac9PVolume`:
-  - `mount`/`unmount` lifecycle with core client: **PARTIAL (wired; connect+attach works)**
-  - `lookupItem`, `getAttributes`: **IN PROGRESS (initial implementation added)**
-  - `enumerateDirectory`: **IN PROGRESS (initial implementation added)**
-  - `read` (implement `FSVolume.ReadWriteOperations.read(...)`): **IN PROGRESS (initial implementation added)**
+  - `mount`/`unmount` lifecycle with core client: **DONE (connect+attach+disconnect)**
+  - `lookupItem`, `getAttributes`: **DONE (initial)**
+  - `enumerateDirectory`: **DONE (snapshot-based cookies)**
+  - `read` (implement `FSVolume.ReadWriteOperations.read(...)`): **DONE (readonly)**
   - fid lifecycle (refcount + clunk + reuse without collisions): **DONE (FSKit layer + fskit-core pool + tests)**
+  - `volumeStatistics`, `supportedVolumeCapabilities`, `requestedMountOptions`: **DONE (minimal)**
 - Add write support (phase 2):
   - create/remove, write, truncate, rename
 - Semantics by negotiated version:

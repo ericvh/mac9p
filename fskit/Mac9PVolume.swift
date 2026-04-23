@@ -81,8 +81,17 @@ final class Mac9PVolume: FSVolume, FSVolume.Operations, FSVolume.ReadWriteOperat
     }
 
     // Request mount options (best-effort) — at minimum, keep the mount read-only.
-    var requestedMountOptions: FSVolume.MountOptions {
-        .readOnly
+    // FSKit reads this after `mount` completes; changing it later has no effect.
+    var requestedMountOptions: FSVolume.MountOptions = .readOnly
+
+    // MARK: - Volume statistics
+
+    var volumeStatistics: FSStatFSResult {
+        // 9P doesn't reliably expose volume sizes; report minimal safe defaults.
+        let s = FSStatFSResult(fileSystemTypeName: "mac9p")
+        s.blockSize = 4096
+        // Leave totals/free as zero (unknown).
+        return s
     }
 
     init(config: NinePClient.Config, mountURL: URL) throws {
