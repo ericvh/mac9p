@@ -27,9 +27,10 @@
 - Packaging:
   - Xcode project with app + filesystem extension target: **TODO**
   - entitlements, sandbox/network permissions: **TODO**
-  - mount syntax documentation and example launchd helpers if needed: **PARTIAL (`fskit/SETUP_XCODE.md`)**
+  - mount syntax documentation and example launchd helpers if needed: **PARTIAL (`fskit/SETUP_XCODE.md`, `fskit-xcode/`)**
 
 ## Legacy kext path (if still needed)
 
 - Verify kext builds against a matching KDK and document the exact KDK/Xcode/macOS version pairing.
 - Remove deprecated CoreFoundation URL escaping calls in `plugin/plugin.c` (optional cleanup).
+

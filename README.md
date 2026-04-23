@@ -51,8 +51,12 @@ See `fskit/SETUP_XCODE.md` for current packaging steps.
 FSKit `Mac9PVolume` now has an initial **readonly implementation** (lookup/attributes/enumeration/read), backed by the async 9P client in `fskit-core/`.
 
 Current scope of the FSKit volume:
+
 - Read-only mount requested (`requestedMountOptions = .readOnly`).
 - Directory enumeration uses per-directory snapshots for stable cookies, but fetches fresh entries from the server on each new enumeration (`cookie.initial`).
+
+### FSKit Xcode project (for real mounts)
+To build a runnable macOS app + FSKit extension target wired to `fskit-core/`, see `fskit-xcode/` (XcodeGen spec).
 
 ## Mounting
 

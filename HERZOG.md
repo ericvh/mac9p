@@ -54,6 +54,8 @@ The FSKit volume has begun to speak in earnest: there is now an initial **read-o
 
 It asks to be mounted as **read-only**, and it distrusts the serenity of cached directory contents. Each new enumeration begins again at the server, yet it holds a small snapshot only long enough to finish the crossing.
 
+If you want to make this creature walk in the world—an app, an extension, a mount that touches a real server—there is a practical scaffold in `fskit-xcode/`, generated from an XcodeGen spec.
+
 ## Mounting
 
 ### From the Finder

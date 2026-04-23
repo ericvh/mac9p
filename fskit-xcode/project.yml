@@ -1,0 +1,41 @@
+name: Mac9PFSKit
+options:
+  deploymentTarget:
+    macOS: "13.0"
+
+packages:
+  Mac9PCore:
+    path: ../fskit-core
+
+targets:
+  Mac9PFSKitApp:
+    type: application
+    platform: macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.mac9p.fskit.app
+        SWIFT_VERSION: "5.0"
+    sources:
+      - path: App
+    dependencies:
+      - target: Mac9PFSKitExtension
+
+  Mac9PFSKitExtension:
+    type: app-extension
+    platform: macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.mac9p.fskit.extension
+        INFOPLIST_FILE: Extension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Extension/Mac9PFSKitExtension.entitlements
+        SWIFT_VERSION: "5.0"
+    sources:
+      - path: ../fskit
+      - path: Extension
+        excludes:
+          - Info.plist
+          - Mac9PFSKitExtension.entitlements
+    dependencies:
+      - package: Mac9PCore
+        product: Mac9PCore
+
