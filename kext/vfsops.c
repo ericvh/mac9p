@@ -1,6 +1,7 @@
 #include "plan9.h"
 #include "fcall.h"
 #include "9p.h"
+#include "../common/versneg.h"
 
 lck_grp_t *lck_grp_9p;
 
@@ -178,18 +179,19 @@ vfs_mount_9p(mount_t mp, vnode_t devvp, user_addr_t data, vfs_context_t ctx)
 	 */
 	{
 		const char *tryv[4];
-		int ntry = 0;
+		int ntry = mac9p_build_version_candidates(
+			(reqvers ? reqvers : NULL),
+			ISSET(nmp->flags, FLAG_DOTL),
+			ISSET(nmp->flags, FLAG_DOTU),
+			tryv,
+			(int)(sizeof(tryv) / sizeof(tryv[0]))
+		);
 
-		/* requested first */
-		tryv[ntry++] = vers;
-
-		/* fallbacks (skip duplicates) */
-		if (strcmp(vers, VERSION9PDOTL) != 0)
-			tryv[ntry++] = VERSION9PDOTL;
-		if (ntry < 4 && strcmp(vers, VERSION9PDOTU) != 0)
-			tryv[ntry++] = VERSION9PDOTU;
-		if (ntry < 4 && strcmp(vers, VERSION9P) != 0)
-			tryv[ntry++] = VERSION9P;
+		/* If we didn't get anything, fall back to the computed vers */
+		if (ntry <= 0) {
+			tryv[0] = vers;
+			ntry = 1;
+		}
 
 		for (int i = 0; i < ntry; i++) {
 			e = version_9p(nmp, (char*)tryv[i], &nmp->version);

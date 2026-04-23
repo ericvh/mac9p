@@ -19,6 +19,13 @@ all clean:
 		$(MAKE) -C $$i $(MAKEFLAGS) $@ || exit 1;\
 	done
 
+test: tests/test_versneg
+	@./tests/test_versneg
+
+tests/test_versneg: tests/test_versneg.c common/versneg.c common/versneg.h
+	@mkdir -p tests
+	$(CC) $(CFLAGS) -Icommon -o $@ tests/test_versneg.c common/versneg.c
+
 kext:
 	@$(MAKE) -C kext $(MAKEFLAGS) all
 

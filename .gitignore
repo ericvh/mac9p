@@ -7,3 +7,6 @@ mount/mount_9p
 plugin/9p
 kext/9p
 
+# test binaries
+tests/test_versneg
+
