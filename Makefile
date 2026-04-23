@@ -25,6 +25,14 @@ test: tests/test_versneg tests/test_fcall_codec
 	@echo "Running tests/test_fcall_codec"
 	./tests/test_fcall_codec
 
+test-kext: test
+
+test-core:
+	@echo "Running SwiftPM tests (fskit-core)"
+	@cd fskit-core && swift test
+
+test-all: test-core test-kext
+
 tests/test_versneg: tests/test_versneg.c common/versneg.c common/versneg.h
 	@mkdir -p tests
 	$(CC) $(CFLAGS) -Icommon -o $@ tests/test_versneg.c common/versneg.c
