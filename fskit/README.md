@@ -34,7 +34,7 @@ After enabling the extension in **Settings → General → Login Items & Extensi
 
 ```bash
 mkdir -p /tmp/mac9p
-mount -t mac9p "9p://sources.cs.bell-labs.com:564/?vers=9P2000" /tmp/mac9p
+mount -t mac9p "9p://9p.io:564/?vers=9P2000" /tmp/mac9p
 ```
 
 Supported `vers` strings:

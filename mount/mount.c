@@ -31,8 +31,6 @@ enum {
 	ALTF_DSSTORE	= 1<<8,
 	ALTF_NOAUTH		= 1<<9,
 	ALTF_DOTU		= 1<<10,
-	ALTF_DOTL		= 1<<11,
-	ALTF_VERS		= 1<<12,
 };
 
 struct mntopt mopts[] = {
@@ -48,9 +46,6 @@ struct mntopt mopts[] = {
 	{ "aport",		0,	ALTF_APORT,		1 },
 	{ "chatty9p",	0,	ALTF_CHATTY9P,	1 },
 	{ "dotu",		0,	ALTF_DOTU,		1 },
-	{ "dotl",		0,	ALTF_DOTL,		1 },
-	{ "vers",		0,	ALTF_VERS,		1 },
-	{ "version",	0,	ALTF_VERS,		1 },
 
 	/* neg */
 	{ "dsstore",	1,	ALTF_DSSTORE,	1 },
@@ -209,11 +204,6 @@ main(int argc, char *argv[])
 				asrv = egetmntoptstr(mp, "asrv");
 			if (altflags & ALTF_APORT)
 				aport = egetmntoptstr(mp, "aport");
-			if (altflags & ALTF_VERS) {
-				args.vers = egetmntoptstr(mp, "vers");
-				if (args.vers == NULL)
-					args.vers = egetmntoptstr(mp, "version");
-			}
 			if (altflags & ALTF_NOAUTH)
 				noauth = 1;
 			/* flags */
@@ -223,8 +213,6 @@ main(int argc, char *argv[])
 				args.flags &= ~FLAG_DSSTORE;
 			if (altflags & ALTF_DOTU)
 				args.flags |= FLAG_DOTU;
-			if (altflags & ALTF_DOTL)
-				args.flags |= FLAG_DOTL;
 			freemntopts(mp);
 			break;
 		default:

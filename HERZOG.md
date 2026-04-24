@@ -63,13 +63,13 @@ For a repeatable end-to-end trial against a living 9P server, there is a script:
 ### From the Finder
 
 *(Broken if the binary is not signed)*  
-In Finder: **Go** → **Connect to Server...** and enter: *9p://sources.cs.bell-labs.com*.
+In Finder: **Go** → **Connect to Server...** and enter: *9p://9p.io*.
 
 ### From a Terminal
 
 ```bash
 mkdir /tmp/sources
-mount -t 9p -onoauth sources.cs.bell-labs.com /tmp/sources
+mount -t 9p -onoauth 9p.io /tmp/sources
 ```
 
 ### Protocol versions (9P2000 / 9P2000.u / 9P2000.L)
@@ -77,9 +77,9 @@ mount -t 9p -onoauth sources.cs.bell-labs.com /tmp/sources
 Mac9P negotiates a 9P version during mount. You may demand a particular dialect of the protocol:
 
 ```bash
-mount -t 9p -o vers=9P2000    -onoauth sources.cs.bell-labs.com /tmp/sources
-mount -t 9p -o dotu          -onoauth sources.cs.bell-labs.com /tmp/sources
-mount -t 9p -o vers=9P2000.L -onoauth sources.cs.bell-labs.com /tmp/sources
+mount -t 9p -o vers=9P2000    -onoauth 9p.io /tmp/sources
+mount -t 9p -o dotu          -onoauth 9p.io /tmp/sources
+mount -t 9p -o vers=9P2000.L -onoauth 9p.io /tmp/sources
 ```
 
 If your requested version is rejected by the server, Mac9P will fall back to another supported version—like an expedition forced to take a lesser pass when the mountain closes its route.

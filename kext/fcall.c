@@ -19,10 +19,6 @@
 #include "fcall.h"
 #include "9p.h"
 
-#ifndef KERNEL
-#include <stdio.h>
-#endif
-
 #define STAT_NSTRINGS(dotu)	(dotu? 5: 4)
 #define STAT_FIX_LEN(dotu)	(STATFIXLEN + (dotu? STATUEXTRALEN: 0))
 

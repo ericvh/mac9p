@@ -56,9 +56,11 @@ Current scope of the FSKit volume:
 - Directory enumeration uses per-directory snapshots for stable cookies, but fetches fresh entries from the server on each new enumeration (`cookie.initial`).
 
 ### FSKit Xcode project (for real mounts)
+
 To build a runnable macOS app + FSKit extension target wired to `fskit-core/`, see `fskit-xcode/` (XcodeGen spec).
 
 ### FSKit end-to-end (manual) test
+
 To run a repeatable end-to-end test against a real 9P server:
 
 ```
@@ -66,6 +68,7 @@ To run a repeatable end-to-end test against a real 9P server:
 ```
 
 ### External 9P server automation (diod)
+
 For automated end-to-end testing of the **user-space 9P client** (not the FSKit mount path), we support spinning up a real 9P server using `diod`:
 
 - `scripts/run-diod-test-server.sh`: builds/runs `diod` and exports a directory
@@ -85,13 +88,13 @@ MAC9P_E2E_URL="9p://127.0.0.1:5640/?vers=9P2000" MAC9P_E2E_READ_FILE="hello.txt"
 ### From the Finder
 
 _(Broken if the binary is not signed)
-**Go** -> **Connect to Server...**: *9p://sources.cs.bell-labs.com*.
+**Go** -> **Connect to Server...**: *9p://9p.io*.
 
 ### From a Terminal
 
 ```
 mkdir /tmp/sources
-mount -t 9p -onoauth sources.cs.bell-labs.com /tmp/sources
+mount -t 9p -onoauth 9p.io /tmp/sources
 
 ```
 
@@ -100,9 +103,9 @@ mount -t 9p -onoauth sources.cs.bell-labs.com /tmp/sources
 Mac9P negotiates a 9P version during mount. You can request a specific version:
 
 ```
-mount -t 9p -o vers=9P2000    -onoauth sources.cs.bell-labs.com /tmp/sources
-mount -t 9p -o dotu          -onoauth sources.cs.bell-labs.com /tmp/sources
-mount -t 9p -o vers=9P2000.L -onoauth sources.cs.bell-labs.com /tmp/sources
+mount -t 9p -o vers=9P2000    -onoauth 9p.io /tmp/sources
+mount -t 9p -o dotu          -onoauth 9p.io /tmp/sources
+mount -t 9p -o vers=9P2000.L -onoauth 9p.io /tmp/sources
 ```
 
 If the requested version is rejected by the server, Mac9P will fall back to another supported version.

@@ -17,7 +17,6 @@
  */
 #define	VERSION9P		"9P2000"
 #define	VERSION9PDOTU	"9P2000.u"
-#define	VERSION9PDOTL	"9P2000.L"
 #define	MAXWELEM		16
 
 typedef
